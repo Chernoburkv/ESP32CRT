@@ -65,7 +65,7 @@
 #include "DataTable.h"
 
 #define BlankPin   34  // high blanks the display
-#define RelPin  4  // encoder button, 0 = pressed
+#define RelPin  4  // Relay HV out
 #define LedPin 2 // ledd
 
 
@@ -277,6 +277,15 @@ void setup()
 
   if (h > 12) h=h-12;
   h=(h*5)+m/12;
+  
+  delay(250);
+  digitalWriteFast(LedPin, HIGH);
+  delay(7000);
+  digitalWriteFast(RelPin, HIGH);
+  delay(250);
+  digitalWriteFast(BlankPin, HIGH);
+
+
 }
 
 // End setup 
@@ -317,7 +326,6 @@ void loop() {
   //PlotTable(TestData,sizeof(TestData),0x00,0,11); //Without square
 
   int i;
-  
   PlotTable(DialData,sizeof(DialData),0x00,1,0);      //2 to back trace
   PlotTable(DialDigits12,sizeof(DialDigits12),0x00,1,0);//2 to back trace 
   PlotTable(HrPtrData, sizeof(HrPtrData), 0xFF,0,9*h);  // 9*h
