@@ -62,26 +62,13 @@
 ******************************************************************************/
 
 #include <driver/dac.h>
-#include <soc/rtc.h>
-#include <soc/sens_reg.h>
 #include "DataTable.h"
 
+#define BlankPin   34  // high blanks the display
+#define RelPin  4  // encoder button, 0 = pressed
+#define LedPin 2 // ledd
 
-//#define EXCEL
-//#define NTP
 
-
-#if defined NTP
-  #include <NTPtimeESP.h>
-  #include <WiFi.h>
-  
-  NTPtime NTPch("europe.pool.ntp.org"); // Choose your server pool
-  char *ssid      = "Your SSID";        // Set you WiFi SSID
-  char *password  = "Your PASS";        // Set you WiFi password
-  
-  int status = WL_IDLE_STATUS;
-  strDateTime dateTime;
-#endif //
 
 // Change this to set the initial Time
 // Now is 10:08:37 (12h)
@@ -134,34 +121,11 @@ inline void Dot(int x, int y)
       lastx=x;
       dac_output_voltage(DAC_CHANNEL_1, x);
     }
-    #if defined EXCEL
-      Serial.print("0x");
-      if (x<=0xF) Serial.print("0");
-      Serial.print(x,HEX);
-      Serial.print(",");
-    #endif
-    #if defined EXCEL
-      Serial.print("0x");
-      if (lasty<=0xF) Serial.print("0");
-      Serial.print(lasty,HEX);
-      Serial.println(",");
-    #endif
+    
     if (lasty!=y){
       lasty=y;
       dac_output_voltage(DAC_CHANNEL_2, y);
     }
-    #if defined EXCEL
-      Serial.print("0x");
-      if (x<=0xF) Serial.print("0");
-      Serial.print(x,HEX);
-      Serial.print(",");
-    #endif
-    #if defined EXCEL
-      Serial.print("0x");
-      if (y<=0xF) Serial.print("0");
-      Serial.print(y,HEX);
-      Serial.println(",");
-    #endif
 }
 
 // End Dot 
@@ -302,86 +266,16 @@ void Line(byte x1, byte y1, byte x2, byte y2)
 
 void setup() 
 {
-  Serial.begin(115200);
-  Serial.println("\nESP32 Oscilloscope Clock v1.0");
-  Serial.println("Mauro Pintus 2018\nwww.mauroh.com");
-  //rtc_clk_cpu_freq_set(RTC_CPU_FREQ_240M);
-  Serial.println("CPU Clockspeed: ");
-  Serial.println(rtc_clk_cpu_freq_value(rtc_clk_cpu_freq_get()));
+  pinMode(BlankPin, OUTPUT);   
+  pinMode(LedPin, OUTPUT);
+  pinMode(RelPin, OUTPUT);
+  
+  
   
   dac_output_enable(DAC_CHANNEL_1);
   dac_output_enable(DAC_CHANNEL_2);
 
   if (h > 12) h=h-12;
-
-  #if defined NTP
-    Serial.println("Connecting to Wi-Fi");
-    
-    WiFi.begin (ssid, password);
-    while (WiFi.status() != WL_CONNECTED) {
-      Serial.print(".");
-      delay(1000);
-      Timeout--;
-      if (Timeout==0){
-        Serial.println("\nWiFi Timeout");
-        break;
-      }
-    }
-    
-    if (Timeout!=0){
-      Serial.println("\nWiFi connected");
-      Serial.println("NTP request sent to Server.");
-      dateTime = NTPch.getNTPtime(1.0, 1);
-      Timeout=20;
-  
-      while (!dateTime.valid) {
-        dateTime = NTPch.getNTPtime(1.0, 1);
-        Serial.print(".");
-        delay(1000);
-        Timeout--;
-        if (Timeout==0){
-          Serial.println("\nNTP Server Timeout");
-          break;
-        }
-      }
-      
-      if (Timeout!=0){
-
-        Serial.println("\nUsing NTP Time");
-        NTPch.printDateTime(dateTime);
-    
-        byte actualHour      = dateTime.hour;
-        byte actualMinute    = dateTime.minute;
-        byte actualsecond    = dateTime.second;
-        int  actualyear      = dateTime.year;
-        byte actualMonth     = dateTime.month;
-        byte actualday       = dateTime.day;
-        byte actualdayofWeek = dateTime.dayofWeek;
-
-        if (actualHour > 12) actualHour=actualHour-12;
-        
-        h=actualHour;
-        m=actualMinute;
-        s=actualsecond;
-      }
-      else{
-        Serial.println("\nUsing Fix Time");
-      }
-    }  
-  #endif    
-
-  #if !defined NTP
-    Serial.println("Using Fix Time");
-  #endif
-
-  if (h<10) Serial.print("0");
-  Serial.print(h);
-  Serial.print(":");
-  if (m<10) Serial.print("0");
-  Serial.print(m);
-  Serial.print(":");
-  if (s<10) Serial.print("0");
-  Serial.println(s);
   h=(h*5)+m/12;
 }
 
@@ -423,23 +317,11 @@ void loop() {
   //PlotTable(TestData,sizeof(TestData),0x00,0,11); //Without square
 
   int i;
-  //Serial.println("Out Ring");                         //2 to back trace
-  //for (i=0; i < 1000; i++) PlotTable(DialData,sizeof(DialData),0x00,2,0);
- 
-  //Serial.println("Diagonals");                        //2 to back trace
-  //for (i=0; i < 2000; i++) PlotTable(DialData,sizeof(DialData),0x00,0,0);
-
+  
   PlotTable(DialData,sizeof(DialData),0x00,1,0);      //2 to back trace
   PlotTable(DialDigits12,sizeof(DialDigits12),0x00,1,0);//2 to back trace 
   PlotTable(HrPtrData, sizeof(HrPtrData), 0xFF,0,9*h);  // 9*h
   PlotTable(MinPtrData,sizeof(MinPtrData),0xFF,0,9*m);  // 9*m
   PlotTable(SecPtrData,sizeof(SecPtrData),0xFF,0,5*s);  // 5*s
-
-  #if defined EXCEL
-    while(1);
-  #endif 
-
 }
 
-// End loop 
-//*****************************************************************************
